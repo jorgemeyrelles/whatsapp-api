@@ -9,8 +9,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "src/server.js"
+      "dest": "src/config/express.js"
     }
-  ],
-  "devCommand": "npm run dev"
+  ]
 }
