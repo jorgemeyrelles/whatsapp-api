@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "src/config/express.js"
+      "dest": "src/server.js"
     }
   ]
 }
