@@ -93,7 +93,7 @@ class WhatsAppInstance {
         sock?.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update
             if (connection === 'connecting') return
-
+            // console.log('-2 -> ', connection, lastDisconnect);
             if (connection === 'close') {
                 // reconnect if not logged out
                 if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
@@ -154,7 +154,8 @@ class WhatsAppInstance {
                         // remove all events
                         this.instance.sock.ev.removeAllListeners()
                         this.instance.qr = ' '
-                        logger.info('socket connection terminated')
+                        // logger.info('socket connection terminated')
+                        logger.info('Atendimento encerrado. Obrigado pelo contato.')
                     }
                 })
             }
@@ -186,7 +187,7 @@ class WhatsAppInstance {
         // on recive new chat
         sock?.ev.on('chats.upsert', (newChat) => {
             //console.log('chats.upsert')
-            //console.log(newChat)
+            // console.log('-1 -> ', newChat)
             const chats = newChat.map((chat) => {
                 return {
                     ...chat,
@@ -199,7 +200,7 @@ class WhatsAppInstance {
         // on chat change
         sock?.ev.on('chats.update', (changedChat) => {
             //console.log('chats.update')
-            //console.log(changedChat)
+            // console.log('0 -> ', changedChat)
             changedChat.map((chat) => {
                 const index = this.instance.chats.findIndex(
                     (pc) => pc.id === chat.id
@@ -209,6 +210,7 @@ class WhatsAppInstance {
                     ...PrevChat,
                     ...chat,
                 }
+                // console.log('0.1 -> ', PrevChat)
             })
         })
 
@@ -233,6 +235,7 @@ class WhatsAppInstance {
             if (m.type !== 'notify') return
 
             // https://adiwajshing.github.io/Baileys/#reading-messages
+            // console.log('1 -> ', config.markMessagesRead, m.type);
             if (config.markMessagesRead) {
                 const unreadMessages = m.messages.map((msg) => {
                     return {
@@ -263,8 +266,44 @@ class WhatsAppInstance {
                     ...msg,
                 }
 
+                // console.log('2 -> ', messageType, msg?.message?.conversation, msg.key.remoteJid.split('@'));
                 if (messageType === 'conversation') {
                     webhookData['text'] = m
+                    // console.log('3 -> ', msg, m);
+                    if (msg?.message?.conversation && !msg?.key.fromMe) {
+                        const to = msg.key.remoteJid.split('@')
+                        const msg1 = 'Olá, você está no atendimento agilizado.'
+                        const msg2 = 'Como podemos ajudar? Escolha umas das opções abaixo:'
+                        const msg3 = '1 - Nota fiscal'
+                        const msg4 = '2 - Funcionamento do aplicativo'
+                        const msg5 = '3 - Funcionamento do site'
+                        const msg6 = 'Para finalizar o atendimento basta digitar "sair" a qualquer momento.';
+                        const mainMsg = `${msg1}\n${msg2}\n${msg3}\n${msg4}\n${msg5}\n\n${msg6}`
+                        const opcaoSelecionada = `Entendido. Em instantes, entraremos em contato.`
+                        const sem = 'Não entendi. Escolha uma das opções e entraremos em contato em instantes.'
+                        const semOpcao = `${sem}\n\n${msg2}\n${msg3}\n${msg4}\n${msg5}\n\n${msg6}`
+                        const sair = 'Atendimento encerrado. Obrigado pelo contato.';
+                        switch (this.verificarPalavras(msg?.message?.conversation)) {
+                            case '1':
+                                await this.sendTextMessage(to[0], `${opcaoSelecionada}\n\n**resposta teste**`)
+                                break;
+                            case '2':
+                                await this.sendTextMessage(to[0], `${opcaoSelecionada}\n\n**resposta teste**`)
+                                break;
+                            case '3':
+                                await this.sendTextMessage(to[0], `${opcaoSelecionada}\n\n**resposta teste**`)
+                                break;
+                            case '4':
+                                await this.sendTextMessage(to[0], mainMsg)
+                                break;
+                            case 'sair':
+                                await await this.sendTextMessage(to[0], `${sair}\n\n**resposta teste**`)
+                                break;
+                            default:
+                                await this.sendTextMessage(to[0], `${semOpcao}\n\n**resposta teste**`)
+                                break;
+                        }
+                    }
                 }
                 if (config.webhookBase64) {
                     switch (messageType) {
@@ -410,6 +449,24 @@ class WhatsAppInstance {
                     this.key
                 )
         })
+    }
+
+    removerAcentosPontuacao(string) {
+        return string.normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^\w\s]|_/g, "")
+            .replace(/\s+/g, " ")
+            .toLowerCase();
+    }
+
+    verificarPalavras(string) {
+        const textoLimpo = this.removerAcentosPontuacao(string);
+
+        const palavras = ['ola', 'oi', 'tudo bem', 'bom dia', 'boa tarde', 'boa noite', 'como vai'];
+
+        const regex = new RegExp(palavras.join('|'), 'i');
+
+        return regex.test(textoLimpo) ? '4' : string.toLowerCase();
     }
 
     async deleteInstance(key) {

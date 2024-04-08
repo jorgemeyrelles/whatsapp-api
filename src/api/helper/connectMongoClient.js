@@ -14,6 +14,7 @@ module.exports = async function connectToCluster(uri) {
         logger.info('STATE: Successfully connected to MongoDB')
         return mongoClient
     } catch (error) {
+        console.log('connectManager -> ', error);
         logger.error('STATE: Connection to MongoDB failed!', error)
         process.exit()
     }
