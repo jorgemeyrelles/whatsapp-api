@@ -11,10 +11,30 @@
             justify-content: center;
             align-items: center;
         }
+        header {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .imageStyle {
+            background-image: url('https://fundacaoabc.org/wp-content/themes/fundacaoabc/assets/img/logocolor.png');
+            background-size: cover;
+        }
     </style>
 </head>
 <body>
-    <h1> Scan Code Below Using WhatsApp App<h1>
+    <!-- <h1> Scan Code Below Using WhatsApp App<h1> -->
+        <header>
+            <h1>Escaneamento de qr code para conectar seu WhatsApp</h1>
+            <div class="imageStyle" style="width: 5rem; height: 3.2rem;"></div>
+            <!-- <div>
+                <img
+                    alt="logo-fundacao"
+                    src="https://fundacaoabc.org/wp-content/themes/fundacaoabc/assets/img/logocolor.png"
+                    style="width: 100px; height: 100px;"
+                >
+            </div> -->
+        </header>
             <div class="container">
                 <img src="<%= qrcode %>" alt="" id="qrcode_box" />
             </div>
