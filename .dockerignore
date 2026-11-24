@@ -1,0 +1,16 @@
+.git
+.github
+.claude
+.husky
+node_modules
+docs
+infra
+scripts
+deploy
+*.md
+.env
+.env.*
+!.env.example
+docker-compose*.yml
+whatsapp-api-nodejs.postman_collection.json
+sessiondata

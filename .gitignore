@@ -1,7 +1,6 @@
 # NODE
 node_modules
 package-lock.json
-yarn.lock
 
 # APPLICATION
 .env
@@ -10,3 +9,6 @@ sessiondata
 # IDEs
 .vscode/settings.json
 .idea
+
+# CLAUDE CODE
+.claude/settings.local.json

@@ -1,0 +1,40 @@
+# Somente prod (VM e2-micro). Não usa o override de dev.
+# Exige no ambiente: APP_IMAGE (ghcr.io/...@sha256:...) e DOMINIO; segredos em /opt/app/.env
+# (validar localmente: ENV_FILE=.env.example APP_IMAGE=x DOMINIO=x docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q).
+services:
+  api:
+    image: ${APP_IMAGE:?defina APP_IMAGE com o digest da imagem}
+    env_file:
+      - ${ENV_FILE:-/opt/app/.env}
+    # gestão só pelo túnel IAP: porta presa ao loopback da VM
+    ports:
+      - "127.0.0.1:3333:3333"
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  redis:
+    logging: *logging
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 64m
+    logging: *logging
+    networks: [interna]
+
+volumes:
+  caddy_data:
+  caddy_config:

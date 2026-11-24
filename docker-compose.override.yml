@@ -1,0 +1,42 @@
+# Somente dev — carregado automaticamente por `docker compose up`.
+services:
+  api:
+    build:
+      context: .
+      target: dev
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MONGODB_ENABLED: "true"
+      MONGODB_URL: mongodb://mongo:27017/whatsapp_api
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "127.0.0.1:3333:3333"
+    volumes:
+      # recarga automática do nodemon; node_modules fica o da imagem
+      - ./src:/app/src
+      - ./tests:/app/tests
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongo:
+    # mesma versão principal do Atlas free
+    image: mongo:8.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    ports:
+      # 27018 no host para não colidir com um Mongo local
+      - "127.0.0.1:${MONGO_HOST_PORT:-27018}:27017"
+    volumes:
+      - mongo:/data/db
+    networks: [interna]
+
+volumes:
+  mongo:
