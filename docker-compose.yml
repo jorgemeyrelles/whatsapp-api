@@ -1,34 +1,61 @@
-version: '3.8'
+# Base comum a dev e prod.
+#   dev : docker compose up            (carrega docker-compose.override.yml automaticamente)
+#   prod: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+name: whatsapp-api
+
+x-healthcheck-api: &healthcheck-api
+  test:
+    - CMD
+    - node
+    - -e
+    - "fetch('http://127.0.0.1:'+(process.env.PORT||3333)+'/status',{headers:{authorization:'Bearer '+(process.env.TOKEN||'')}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  interval: 15s
+  timeout: 5s
+  start_period: 40s
+  retries: 5
 
 services:
-    mongodb:
-        container_name: mongodb
-        image: mongo:latest
-        ports:
-            - 27017:27017
-        volumes:
-            - db:/data/db
-    app:
-        container_name: api
-        build:
-            context: .
-            dockerfile: Dockerfile
-            args:
-                - PORT=3333
-        depends_on:
-            - mongodb
-        env_file: .env
-        ports:
-            - 3333:3333
-        environment:
-            - PORT=3333
-            - MONGODB_ENABLED=true
-            - MONGODB_URL=mongodb://mongodb:27017
-            - WEBHOOK_ENABLED=false
-            - LOG_LEVEL=trace
-        volumes:
-            - ./:/home/node/app
-            - /home/node/app/node_modules/
+  api:
+    # API REST + worker no mesmo processo (ADR 0001: e2-micro com 1 GB)
+    restart: unless-stopped
+    environment:
+      PORT: "3333"
+      REDIS_URL: redis://redis:6379
+    healthcheck: *healthcheck-api
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 450m
+    networks: [interna]
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    # noeviction: exigido pelo BullMQ (E4); 64 MB cabem no orçamento de memória da e2-micro
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis:/data
+    mem_limit: 96m
+    networks: [interna]
+
+  otel-collector:
+    # Opcional até a E7: docker compose --profile obs up
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    profiles: [obs]
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./deploy/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    mem_limit: 90m
+    networks: [interna]
 
 volumes:
-    db:
+  redis:
+
+networks:
+  interna:

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Conectar WhatsApp</title>
+    <style nonce="<%= nonce %>">
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f5f2; color: #1b211d; font: 16px/1.5 system-ui, sans-serif; }
+        main { width: min(420px, 100% - 32px); background: #fff; border: 1px solid #d6dad2; border-radius: 12px; padding: 28px 24px; text-align: center; }
+        h1 { font-size: 1.25rem; margin: 0 0 6px; }
+        p { margin: 0 0 16px; color: #4e594f; }
+        #qr { width: 264px; height: 264px; margin: 0 auto 16px; display: grid; place-items: center; background: #f4f5f2; border-radius: 8px; }
+        #qr img { width: 100%; height: 100%; image-rendering: pixelated; }
+        ol { text-align: left; color: #4e594f; padding-left: 20px; margin: 0; font-size: 0.92rem; }
+        .ok { color: #2f6e56; font-weight: 600; }
+        .erro { color: #a6531f; font-weight: 600; }
+        button { font: inherit; font-weight: 600; color: #fff; background: #2f6e56; border: 0; border-radius: 8px; padding: 12px 20px; cursor: pointer; }
+        button:disabled { opacity: 0.6; cursor: wait; }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Conectar WhatsApp</h1>
+    <p id="status">Este link vale para um único navegador.</p>
+    <p><button id="mostrar" type="button">Mostrar QR code</button></p>
+    <div id="qr" aria-live="polite" hidden></div>
+    <ol id="passos">
+        <li>Abra o WhatsApp no celular.</li>
+        <li>Toque em <b>Configurações → Aparelhos conectados → Conectar aparelho</b>.</li>
+        <li>Aponte a câmera para o QR. Ele se renova sozinho a cada ~20 s.</li>
+    </ol>
+</main>
+<script nonce="<%= nonce %>">
+    (function () {
+        const statusEl = document.getElementById('status')
+        const qrEl = document.getElementById('qr')
+        const passos = document.getElementById('passos')
+        const botao = document.getElementById('mostrar')
+        const base = '<%= base %>'
+        let atual = ''
+        let timer
+
+        function fim(texto, classe) {
+            clearInterval(timer)
+            botao.hidden = true
+            statusEl.textContent = texto
+            statusEl.className = classe
+            qrEl.replaceChildren()
+            qrEl.style.display = 'none'
+            passos.style.display = 'none'
+        }
+
+        async function consultar() {
+            try {
+                const r = await fetch(base + '/estado', { credentials: 'same-origin', cache: 'no-store' })
+                if (r.status === 410) return fim('Link expirado ou já utilizado. Gere um novo link.', 'erro')
+                const d = await r.json()
+                if (d.status === 'conectado') return fim('Conectado! Pode fechar esta página.', 'ok')
+                if (d.status === 'esgotado') return fim('O QR expirou várias vezes sem leitura. Gere um novo link.', 'erro')
+                if (d.status === 'qr' && d.qr !== atual) {
+                    atual = d.qr
+                    const img = new Image()
+                    img.alt = 'QR code para conectar o WhatsApp'
+                    img.src = d.qr
+                    qrEl.replaceChildren(img)
+                    statusEl.textContent = 'Escaneie o QR code com o WhatsApp'
+                }
+            } catch (e) {
+                statusEl.textContent = 'Sem conexão com o servidor. Tentando de novo…'
+            }
+        }
+
+        function iniciar() {
+            botao.hidden = true
+            qrEl.hidden = false
+            statusEl.textContent = 'Gerando QR code…'
+            timer = setInterval(consultar, 3000)
+            consultar()
+        }
+
+        botao.addEventListener('click', async function () {
+            botao.disabled = true
+            try {
+                const r = await fetch(base + '/abrir', { method: 'POST', credentials: 'same-origin' })
+                if (r.status !== 204) return fim('Link expirado ou já utilizado. Gere um novo link.', 'erro')
+                iniciar()
+            } catch (e) {
+                botao.disabled = false
+                statusEl.textContent = 'Sem conexão com o servidor. Tente de novo.'
+            }
+        })
+
+        if (<%= aberto %>) iniciar()
+    })()
+</script>
+</body>
+</html>

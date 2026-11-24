@@ -15,6 +15,12 @@ app.set('views', path.join(__dirname, '../api/views'))
 global.WhatsAppInstances = {}
 
 const routes = require('../api/routes/')
+const connectRoutes = require('../api/routes/connect.route')
+
+app.disable('x-powered-by')
+// Página de conexão por link de uso único: pública, montada antes do bearer
+app.use('/conectar', connectRoutes)
+
 if (protectRoutes) {
     app.use(tokenCheck)
 }

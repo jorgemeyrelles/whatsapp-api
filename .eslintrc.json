@@ -4,7 +4,10 @@
         "ecmaVersion": "latest",
         "sourceType": "module"
     },
-    "extends": ["eslint:recommended", "prettier"],
+    "extends": [
+        "eslint:recommended",
+        "prettier"
+    ],
     "env": {
         "es2021": true,
         "node": true
@@ -18,5 +21,15 @@
         "WhatsAppInstances": true,
         "describe": true,
         "it": true
-    }
+    },
+    "overrides": [
+        {
+            "files": [
+                "tests/**/*.js"
+            ],
+            "env": {
+                "mocha": true
+            }
+        }
+    ]
 }

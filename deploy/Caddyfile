@@ -1,0 +1,21 @@
+# Só o que é público passa. Rotas de gestão (instância, envio) ficam fora: acesso via túnel IAP.
+# /conectar/<token>: página do QR, protegida pelo link de uso único gerado em POST /instance/connect-link.
+{$DOMINIO} {
+	encode zstd gzip
+
+	@publico path /status /chat /chat/* /conectar/*
+	handle @publico {
+		reverse_proxy api:3333
+	}
+
+	handle {
+		respond 404
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+}
